@@ -81,6 +81,8 @@ The CNN model consists of:
 - MaxPooling Layers
 
 ## Project Structure
+
+```text
 Tomato-Leaf-Disease-Detection/
 │
 ├── frontend/
@@ -88,8 +90,7 @@ Tomato-Leaf-Disease-Detection/
 │
 ├── model/
 │   ├── tomato-2/
-│   ├── training-1/
-│   └── tomato_leaf_disease_model.keras
+│   └── training-1/
 │
 ├── cloud-function/
 │   ├── main.py
@@ -99,7 +100,7 @@ Tomato-Leaf-Disease-Detection/
 │
 ├── README.md
 └── .gitignore
-
+```
 
 ## Results
 
