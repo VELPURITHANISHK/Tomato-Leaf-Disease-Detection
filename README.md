@@ -10,7 +10,7 @@ This project leverages Computer Vision and Deep Learning techniques to assist fa
 
 This project was trained using the PlantVillage dataset, which contains healthy and diseased plant leaf images for various crops, including tomato plants.
 
-##Dataset Source:
+**Dataset Source:**
 https://www.kaggle.com/datasets/arjuntejaswi/plant-village
 
 ### Tomato Disease Classes
@@ -113,10 +113,10 @@ Tomato-Leaf-Disease-Detection/
 git clone https://github.com/your-username/Tomato-Leaf-Disease-Detection.git
 cd Tomato-Leaf-Disease-Detection
 
-##Install Dependencies
+Install Dependencies
 pip install -r requirements.txt
 
-##Run the Project
+Run the Project
 python app.py
 
 Author
