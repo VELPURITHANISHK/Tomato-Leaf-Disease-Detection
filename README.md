@@ -85,21 +85,20 @@ The CNN model consists of:
 ```text
 Tomato-Leaf-Disease-Detection/
 │
-├── frontend/
-│   └── app.html
-│
-├── model/
-│   ├── tomato-2/
-│   └── training-1/
-│
-├── cloud-function/
+├── gcp/
+│   ├── app.html
 │   ├── main.py
 │   └── requirements.txt
 │
-├── screenshots/
+├── tomato-2/
+│   ├── training-1/
+│   │   └── Untitled.ipynb
+│   │
+│   ├── tomato_leaf_disease_model.keras
+│   └── tomato_leaf_disease_model.tflite
 │
-├── README.md
-└── .gitignore
+├── .gitignore
+└── README.md
 ```
 
 ## Results
