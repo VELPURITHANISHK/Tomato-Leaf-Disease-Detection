@@ -1,0 +1,537 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Tomato Leaf Disease Detector</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --red: #c0392b;
+    --red-light: #e74c3c;
+    --green: #27ae60;
+    --green-light: #2ecc71;
+    --leaf: #1a5c2a;
+    --leaf-mid: #2d8a45;
+    --cream: #fdf6ec;
+    --dark: #1a1a1a;
+    --mid: #444;
+    --subtle: #888;
+    --card-bg: rgba(255,255,255,0.92);
+    --shadow: 0 20px 60px rgba(0,0,0,0.18);
+    --radius: 24px;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    min-height: 100vh;
+    font-family: 'DM Sans', sans-serif;
+    background: linear-gradient(135deg, #0d2b14 0%, #1a5c2a 45%, #0d2b14 100%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 24px 16px;
+    position: relative;
+    overflow-x: hidden;
+  }
+
+  /* Decorative leaf shapes */
+  body::before, body::after {
+    content: '';
+    position: fixed;
+    border-radius: 60% 40% 70% 30% / 50% 60% 40% 50%;
+    opacity: 0.07;
+    pointer-events: none;
+    z-index: 0;
+  }
+  body::before {
+    width: 500px; height: 500px;
+    background: var(--green-light);
+    top: -100px; left: -100px;
+    animation: drift 12s ease-in-out infinite alternate;
+  }
+  body::after {
+    width: 400px; height: 400px;
+    background: var(--green);
+    bottom: -100px; right: -80px;
+    animation: drift 15s ease-in-out infinite alternate-reverse;
+  }
+  @keyframes drift { 0% { transform: rotate(0deg) scale(1); } 100% { transform: rotate(25deg) scale(1.08); } }
+
+  .card {
+    position: relative;
+    z-index: 1;
+    background: var(--card-bg);
+    backdrop-filter: blur(20px);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow), 0 0 0 1px rgba(255,255,255,0.3);
+    width: 100%;
+    max-width: 420px;
+    overflow: hidden;
+    animation: slideUp 0.7s cubic-bezier(0.22,1,0.36,1) both;
+  }
+  @keyframes slideUp { from { opacity: 0; transform: translateY(40px); } to { opacity: 1; transform: translateY(0); } }
+
+  .header {
+    background: linear-gradient(135deg, var(--leaf) 0%, var(--leaf-mid) 100%);
+    padding: 28px 28px 22px;
+    text-align: center;
+    position: relative;
+    overflow: hidden;
+  }
+  .header::before {
+    content: '';
+    position: absolute;
+    width: 200px; height: 200px;
+    background: rgba(255,255,255,0.05);
+    border-radius: 50%;
+    top: -60px; right: -40px;
+  }
+  .header-icon { font-size: 2rem; margin-bottom: 6px; }
+  .header h1 {
+    font-family: 'Playfair Display', serif;
+    color: #fff;
+    font-size: 1.45rem;
+    line-height: 1.25;
+    font-weight: 900;
+    letter-spacing: -0.3px;
+  }
+  .header p {
+    color: rgba(255,255,255,0.75);
+    font-size: 0.78rem;
+    margin-top: 5px;
+    font-weight: 400;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+  }
+
+  .body { padding: 24px; }
+
+  /* Preview area */
+  .preview-zone {
+    border: 2.5px dashed #b5d5be;
+    border-radius: 18px;
+    background: linear-gradient(135deg, #f0f9f2, #e8f5ec);
+    position: relative;
+    overflow: hidden;
+    cursor: pointer;
+    transition: border-color 0.25s, background 0.25s;
+    aspect-ratio: 1/1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .preview-zone:hover { border-color: var(--leaf-mid); background: #e0f2e6; }
+  .preview-zone.has-image { border-style: solid; border-color: var(--leaf-mid); }
+
+  .placeholder {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+    padding: 20px;
+    pointer-events: none;
+  }
+  .placeholder-icon {
+    width: 64px; height: 64px;
+    border-radius: 16px;
+    background: linear-gradient(135deg, #c8e6c9, #a5d6a7);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 2rem;
+    box-shadow: 0 4px 16px rgba(39,174,96,0.2);
+  }
+  .placeholder p { color: var(--mid); font-size: 0.88rem; text-align: center; font-weight: 500; }
+  .placeholder span { color: var(--subtle); font-size: 0.76rem; }
+
+  #preview-img {
+    position: absolute; inset: 0;
+    width: 100%; height: 100%;
+    object-fit: cover;
+    border-radius: 16px;
+    display: none;
+  }
+
+  #file-input { display: none; }
+
+  /* Buttons */
+  .btn-row {
+    display: flex; gap: 12px;
+    margin-top: 16px;
+  }
+  .btn {
+    flex: 1;
+    border: none; outline: none; cursor: pointer;
+    border-radius: 14px;
+    padding: 14px;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 0.85rem;
+    font-weight: 600;
+    transition: all 0.2s;
+    display: flex; align-items: center; justify-content: center; gap: 8px;
+    letter-spacing: 0.3px;
+  }
+  .btn-outline {
+    background: #f0f9f2;
+    color: var(--leaf);
+    border: 2px solid #b5d5be;
+  }
+  .btn-outline:hover { background: #e0f2e6; border-color: var(--leaf-mid); transform: translateY(-1px); }
+
+  .btn-primary {
+    background: linear-gradient(135deg, var(--leaf) 0%, var(--leaf-mid) 100%);
+    color: #fff;
+    box-shadow: 0 4px 16px rgba(27,92,42,0.35);
+  }
+  .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 8px 24px rgba(27,92,42,0.4); }
+  .btn-primary:active { transform: translateY(0); }
+  .btn-primary:disabled { opacity: 0.55; cursor: not-allowed; transform: none; }
+
+  /* Result card */
+  .result {
+    margin-top: 20px;
+    background: #fff;
+    border-radius: 18px;
+    padding: 20px;
+    border: 1.5px solid #e0eee4;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.07);
+    display: none;
+    animation: fadeIn 0.5s ease both;
+  }
+  @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+  .result.visible { display: block; }
+
+  .result-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 12px;
+  }
+  .result-label-group { flex: 1; }
+  .result-label-title {
+    font-size: 0.68rem;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: var(--subtle);
+    font-weight: 600;
+    margin-bottom: 4px;
+  }
+  .result-label-value {
+    font-family: 'Playfair Display', serif;
+    font-size: 1.35rem;
+    font-weight: 700;
+    color: var(--dark);
+    line-height: 1.15;
+  }
+  .result-label-value.healthy { color: var(--green); }
+  .result-label-value.diseased { color: var(--red); }
+
+  .confidence-badge {
+    background: linear-gradient(135deg, var(--leaf), var(--leaf-mid));
+    color: #fff;
+    border-radius: 12px;
+    padding: 8px 14px;
+    text-align: center;
+    min-width: 80px;
+  }
+  .confidence-badge .conf-title {
+    font-size: 0.62rem;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    opacity: 0.85;
+    display: block;
+    margin-bottom: 2px;
+  }
+  .confidence-badge .conf-value {
+    font-family: 'Playfair Display', serif;
+    font-size: 1.25rem;
+    font-weight: 700;
+  }
+
+  /* Progress bar */
+  .conf-bar-wrap { margin-top: 14px; }
+  .conf-bar-label { display: flex; justify-content: space-between; font-size: 0.72rem; color: var(--subtle); margin-bottom: 6px; }
+  .conf-bar-track {
+    height: 7px;
+    background: #e8f5ec;
+    border-radius: 99px;
+    overflow: hidden;
+  }
+  .conf-bar-fill {
+    height: 100%;
+    border-radius: 99px;
+    background: linear-gradient(90deg, var(--leaf), var(--green-light));
+    width: 0%;
+    transition: width 1s cubic-bezier(0.22,1,0.36,1);
+  }
+  .conf-bar-fill.warning { background: linear-gradient(90deg, #e67e22, #f1c40f); }
+  .conf-bar-fill.danger { background: linear-gradient(90deg, var(--red), var(--red-light)); }
+
+  /* Tip box */
+  .tip-box {
+    margin-top: 14px;
+    background: #f0f9f2;
+    border-left: 4px solid var(--leaf-mid);
+    border-radius: 0 10px 10px 0;
+    padding: 10px 14px;
+    font-size: 0.78rem;
+    color: var(--mid);
+    line-height: 1.5;
+  }
+  .tip-box.bad { background: #fff4f4; border-color: var(--red-light); }
+
+  /* Loading spinner */
+  .spinner {
+    display: none;
+    width: 22px; height: 22px;
+    border: 3px solid rgba(255,255,255,0.35);
+    border-top-color: #fff;
+    border-radius: 50%;
+    animation: spin 0.7s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* Error */
+  .error-msg {
+    margin-top: 14px;
+    background: #fff0f0;
+    border: 1.5px solid #fcd4d4;
+    border-radius: 12px;
+    padding: 12px 16px;
+    color: var(--red);
+    font-size: 0.82rem;
+    display: none;
+  }
+  .error-msg.visible { display: block; }
+
+  /* Footer */
+  .footer {
+    text-align: center;
+    margin-top: 20px;
+    font-size: 0.7rem;
+    color: rgba(255,255,255,0.35);
+    letter-spacing: 0.3px;
+  }
+</style>
+</head>
+<body>
+
+<div>
+  <div class="card">
+    <div class="header">
+      <div class="header-icon">🍅</div>
+      <h1>Tomato Leaf Disease<br>Detector</h1>
+      <p>AI-Powered Tomato Leaf Disease Analysis</p>
+    </div>
+
+    <div class="body">
+
+      <!-- Preview -->
+      <div class="preview-zone" id="drop-zone" onclick="document.getElementById('file-input').click()">
+        <div class="placeholder" id="placeholder">
+          <div class="placeholder-icon">🌿</div>
+          <p>Tap to upload a leaf photo</p>
+          <span>JPG, PNG supported</span>
+        </div>
+        <img id="preview-img" alt="Leaf preview">
+      </div>
+     <!-- Gallery input -->
+<input type="file" id="file-input" accept="image/*" style="display:none;">
+
+<!-- Camera input -->
+<input type="file" id="camera-input" accept="image/*" capture="environment" style="display:none;">
+
+<!-- Action buttons -->
+<div class="btn-row">
+  <button class="btn btn-outline" onclick="document.getElementById('file-input').click()">
+    <span>📁</span> Choose&nbsp;File
+  </button>
+
+  <button class="btn btn-outline" onclick="document.getElementById('camera-input').click()">
+    <span>📷</span> Camera
+  </button>
+</div>
+
+      <button class="btn btn-primary" id="analyze-btn" onclick="analyze()" disabled style="margin-top:12px;width:100%">
+        <div class="spinner" id="spinner"></div>
+        <span id="btn-text">🔬 Analyze Leaf</span>
+      </button>
+
+      <!-- Error -->
+      <div class="error-msg" id="error-msg"></div>
+
+      <!-- Result -->
+      <div class="result" id="result-box">
+        <div class="result-row">
+          <div class="result-label-group">
+            <div class="result-label-title">Label</div>
+            <div class="result-label-value" id="result-label">—</div>
+          </div>
+          <div class="confidence-badge">
+            <span class="conf-title">Confidence</span>
+            <span class="conf-value" id="result-conf">—</span>
+          </div>
+        </div>
+        <div class="conf-bar-wrap">
+          <div class="conf-bar-label"><span>Confidence Level</span><span id="conf-bar-pct">—</span></div>
+          <div class="conf-bar-track"><div class="conf-bar-fill" id="conf-bar"></div></div>
+        </div>
+        <div class="tip-box" id="tip-box"></div>
+      </div>
+
+    </div>
+  </div>
+
+  <div class="footer">Built with Google Cloud Functions & TensorFlow</div>
+</div>
+
+<script>
+  const API_URL = "https://us-central1-tomato-leaf-disease-model.cloudfunctions.net/predict_lite";
+
+  let selectedFile = null;
+
+  const fileInput = document.getElementById('file-input');
+  const cameraInput = document.getElementById('camera-input');
+  const previewImg = document.getElementById('preview-img');
+  const placeholder = document.getElementById('placeholder');
+  const analyzeBtn = document.getElementById('analyze-btn');
+  const spinner = document.getElementById('spinner');
+  const btnText = document.getElementById('btn-text');
+  const resultBox = document.getElementById('result-box');
+  const errorMsg = document.getElementById('error-msg');
+  const dropZone = document.getElementById('drop-zone');
+
+  // Disease tips
+  const tips = {
+    'Bacterial Spot': 'Avoid overhead watering. Apply copper-based bactericide. Remove infected leaves.',
+    'Early Blight': 'Apply fungicide containing chlorothalonil. Remove lower infected leaves promptly.',
+    'Late Blight': 'Urgent: apply fungicide immediately. Remove & destroy infected plants to prevent spread.',
+    'Leaf Mold': 'Improve air circulation. Reduce humidity. Apply fungicide if severe.',
+    'Septoria Leaf Spot': 'Remove affected leaves. Apply fungicide. Avoid wetting foliage when watering.',
+    'Spider Mites': 'Spray with water or miticide. Increase humidity. Remove heavily infested leaves.',
+    'Target Spot': 'Apply fungicide. Avoid overhead irrigation. Rotate crops next season.',
+    'Tomato Yellow Leaf Curl Virus': 'No cure — remove infected plants. Control whitefly vectors with insecticide.',
+    'Tomato Mosaic Virus': 'No cure. Remove infected plants. Disinfect tools. Wash hands after handling.',
+    'Healthy': '✅ Your tomato plant looks healthy! Keep up good watering and care practices.',
+  };
+
+  fileInput.addEventListener('change', e => {
+    const file = e.target.files[0];
+    if (!file) return;
+    loadFile(file);
+  });
+
+  cameraInput.addEventListener('change', e => {
+  const file = e.target.files[0];
+  if (!file) return;
+  loadFile(file);
+});
+
+  // Drag-and-drop
+  dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.style.background = '#d6eedd'; });
+  dropZone.addEventListener('dragleave', () => { dropZone.style.background = ''; });
+  dropZone.addEventListener('drop', e => {
+    e.preventDefault();
+    dropZone.style.background = '';
+    const file = e.dataTransfer.files[0];
+    if (file && file.type.startsWith('image/')) loadFile(file);
+  });
+
+  function loadFile(file) {
+    selectedFile = file;
+    const url = URL.createObjectURL(file);
+    previewImg.src = url;
+    previewImg.style.display = 'block';
+    placeholder.style.display = 'none';
+    dropZone.classList.add('has-image');
+    analyzeBtn.disabled = false;
+    resultBox.classList.remove('visible');
+    errorMsg.classList.remove('visible');
+  }
+
+ function openCamera() {
+  cameraInput.click();
+}
+
+
+  async function analyze() {
+    if (!selectedFile) return;
+
+    // Loading state
+    analyzeBtn.disabled = true;
+    spinner.style.display = 'block';
+    btnText.textContent = 'Analyzing...';
+    resultBox.classList.remove('visible');
+    errorMsg.classList.remove('visible');
+
+    try {
+      const formData = new FormData();
+      formData.append('data', selectedFile);
+
+      const response = await fetch(API_URL, {
+        method: 'POST',
+        body: formData,
+      });
+
+      if (!response.ok) throw new Error(`Server error: ${response.status}`);
+
+      const data = await response.json();
+
+      // Flexible key parsing
+      const label = data.label || data.class || data.prediction || data.disease || Object.keys(data)[0];
+      const conf = data.confidence ?? data.score ?? data.probability ?? 0;
+
+      showResult(label, conf);
+    } catch (err) {
+      showError(err.message || 'Failed to connect to the model. Please try again.');
+    } finally {
+      analyzeBtn.disabled = false;
+      spinner.style.display = 'none';
+      btnText.textContent = '🔬 Analyze Leaf';
+    }
+  }
+
+  function showResult(label, conf) {
+   const displayPct = Number(conf).toFixed(2) + '%';
+    const fillPct = Number(conf);
+
+    const labelEl = document.getElementById('result-label');
+    const confEl = document.getElementById('result-conf');
+    const bar = document.getElementById('conf-bar');
+    const barPct = document.getElementById('conf-bar-pct');
+    const tipBox = document.getElementById('tip-box');
+
+    labelEl.textContent = label;
+    confEl.textContent = displayPct;
+    barPct.textContent = displayPct;
+
+    const isHealthy = label.toLowerCase().includes('healthy');
+    labelEl.className = 'result-label-value ' + (isHealthy ? 'healthy' : 'diseased');
+
+    // Bar color
+    bar.className = 'conf-bar-fill';
+    if (fillPct < 50) bar.classList.add('danger');
+    else if (fillPct < 75) bar.classList.add('warning');
+
+    setTimeout(() => { bar.style.width = fillPct + '%'; }, 50);
+
+    // Tip
+    const tipKey = Object.keys(tips).find(k => label.toLowerCase().includes(k.toLowerCase())) || null;
+    if (tipKey) {
+      tipBox.textContent = tips[tipKey];
+      tipBox.className = 'tip-box' + (isHealthy ? '' : ' bad');
+    } else {
+      tipBox.textContent = isHealthy ? tips['Healthy'] : 'Consult an agronomist for a detailed diagnosis and treatment plan.';
+      tipBox.className = 'tip-box' + (isHealthy ? '' : ' bad');
+    }
+
+    resultBox.classList.add('visible');
+  }
+
+  function showError(msg) {
+    errorMsg.textContent = '⚠️ ' + msg;
+    errorMsg.classList.add('visible');
+  }
+</script>
+</body>
+</html>
